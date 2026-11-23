@@ -22,6 +22,7 @@
     <DebugType>embedded</DebugType>
     <Title>Firewall Dropper</Title>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/Auhgneticts/Firewall-Dropper</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
