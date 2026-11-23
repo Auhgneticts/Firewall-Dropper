@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FirewallDropper</RootNamespace>
+    <AssemblyName>FirewallDropper</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\FirewallDropper.ico</ApplicationIcon>
+
+    <Product>Firewall Dropper</Product>
+    <AssemblyTitle>Firewall Dropper</AssemblyTitle>
+    <Description>Drag programs onto Firewall Dropper to block or allow them in Windows Defender Firewall.</Description>
+    <Version>2.0.0</Version>
+
+    <!-- The WPF Fluent theme (ThemeMode) is still flagged as experimental. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>embedded</DebugType>
+    <Title>Firewall Dropper</Title>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\FirewallDropper.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

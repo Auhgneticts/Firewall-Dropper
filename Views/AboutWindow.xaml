@@ -1,0 +1,68 @@
+<Window x:Class="FirewallDropper.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Firewall Dropper" Icon="{StaticResource AppIcon}"
+        Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <StackPanel Margin="24,20,24,20">
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Image Source="{StaticResource AppIcon}" Width="56" Height="56" Margin="0,0,16,0" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="Firewall Dropper" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock x:Name="VersionText" Style="{StaticResource Caption}" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,12"
+                   Text="Block or allow programs in Windows Defender Firewall by dragging them onto the Firewall Dropper icon." />
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="How to use" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <TextBlock Style="{StaticResource Caption}" FontSize="13" Margin="0,0,0,4"
+                           Text="1. Choose what should happen to inbound and outbound traffic in the main window." />
+                <TextBlock Style="{StaticResource Caption}" FontSize="13" Margin="0,0,0,4"
+                           Text="2. Drag a program, or its shortcut, onto the Firewall Dropper desktop shortcut. You can also right-click it and choose Send to › Firewall Dropper." />
+                <TextBlock Style="{StaticResource Caption}" FontSize="13" Margin="0,0,0,4"
+                           Text="3. Check the list and click OK. Windows asks for administrator permission, then the rules are added." />
+                <TextBlock Style="{StaticResource Caption}" FontSize="13"
+                           Text="4. Use Rules › View firewall rules to turn rules off or remove them later." />
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                </Grid.RowDefinitions>
+                <Grid.Resources>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="Margin" Value="0,2,12,2" />
+                    </Style>
+                </Grid.Resources>
+                <TextBlock Text="Program" />
+                <TextBlock x:Name="ExeText" Grid.Column="1" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                <TextBlock Grid.Row="1" Text="Settings" />
+                <TextBlock x:Name="SettingsText" Grid.Row="1" Grid.Column="1" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                <TextBlock Grid.Row="2" Text="Installed" />
+                <TextBlock x:Name="InstalledText" Grid.Row="2" Grid.Column="1" />
+                <TextBlock Grid.Row="3" Text="Firewall group" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="Firewall Dropper" />
+            </Grid>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="Open settings folder" Click="OpenSettingsFolder_Click" Margin="0,0,8,0" />
+            <Button Content="Close" MinWidth="90" IsDefault="True" IsCancel="True" Style="{DynamicResource AccentButtonStyle}" />
+        </StackPanel>
+    </StackPanel>
+</Window>
