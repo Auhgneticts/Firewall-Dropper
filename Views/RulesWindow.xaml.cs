@@ -31,8 +31,7 @@ public partial class RulesWindow : Window
             return;
         }
         _open = new RulesWindow();
-        if (owner is { IsVisible: true }) _open.Owner = owner;
-        else _open.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowPlacement.Place(_open, owner);
         _open.Closed += (_, _) => _open = null;
         _open.Show();
     }
@@ -103,7 +102,7 @@ public partial class RulesWindow : Window
         _busy = true;
         UpdateState();
         StatusText.Text = working;
-        bool? ok = await RuleOperations.RunAsync(op, names);
+        bool? ok = await RuleOperations.RunAsync(op, names, this);
         _busy = false;
         await LoadAsync();
         if (ok is null)
@@ -125,7 +124,7 @@ public partial class RulesWindow : Window
         string what = selected.Count == 1
             ? $"the {selected[0].Rule.DirectionText.ToLowerInvariant()} rule for {selected[0].Rule.ProgramName}"
             : $"{selected.Count} rules";
-        if (MessageBox.Show(this, $"Remove {what} from Windows Firewall?", AppInfo.Name,
+        if (Dialog.Show(this, $"Remove {what} from Windows Firewall?",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
         await RunAsync(RuleOperations.Remove, selected.Select(r => r.Rule.Name).ToList(), "Removing…");
@@ -133,8 +132,8 @@ public partial class RulesWindow : Window
 
     private async void RemoveAll_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, $"Remove all {_rows.Count} rules created by Firewall Dropper from Windows Firewall?",
-                AppInfo.Name, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        if (Dialog.Show(this, $"Remove all {_rows.Count} rules created by Firewall Dropper from Windows Firewall?",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
         await RunAsync(RuleOperations.RemoveAll, [], "Removing all…");
     }

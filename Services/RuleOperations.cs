@@ -1,4 +1,5 @@
 using System.Windows;
+using FirewallDropper.Views;
 
 namespace FirewallDropper.Services;
 
@@ -15,16 +16,17 @@ public static class RuleOperations
     public const string RemoveAll = "remove-all";
 
     /// <summary>Runs the operation. Returns true on success, false on error, null if the user declined the UAC prompt.</summary>
-    public static async Task<bool?> RunAsync(string op, IReadOnlyList<string> names)
+    /// <param name="owner">The window the request came from; any error dialog is centered on it.</param>
+    public static async Task<bool?> RunAsync(string op, IReadOnlyList<string> names, Window? owner)
     {
         if (AppInfo.IsAdministrator)
         {
             var errors = await Task.Run(() => Perform(op, names));
-            ShowErrors(errors);
+            ShowErrors(errors, owner);
             return errors.Count == 0;
         }
 
-        var proc = Elevation.RelaunchElevated([HelperFlag, op, .. names]);
+        var proc = Elevation.RelaunchElevated([HelperFlag, op, .. names], owner);
         if (proc is null)
             return null;
         await proc.WaitForExitAsync();
@@ -32,29 +34,29 @@ public static class RuleOperations
     }
 
     /// <summary>Blocking version, used during uninstall.</summary>
-    public static bool? Run(string op, IReadOnlyList<string> names)
+    public static bool? Run(string op, IReadOnlyList<string> names, Window? owner)
     {
         if (AppInfo.IsAdministrator)
         {
             var errors = Perform(op, names);
-            ShowErrors(errors);
+            ShowErrors(errors, owner);
             return errors.Count == 0;
         }
 
-        var proc = Elevation.RelaunchElevated([HelperFlag, op, .. names]);
+        var proc = Elevation.RelaunchElevated([HelperFlag, op, .. names], owner);
         if (proc is null)
             return null;
         proc.WaitForExit();
         return proc.ExitCode == 0;
     }
 
-    /// <summary>Entry point for the elevated helper process.</summary>
+    /// <summary>Entry point for the elevated helper process. Its error dialog centers on the caller's window via WindowPlacement.Hint.</summary>
     public static int RunHelper(string[] args)
     {
         if (args.Length == 0)
             return 2;
         var errors = Perform(args[0], args.Skip(1).ToList());
-        ShowErrors(errors);
+        ShowErrors(errors, owner: null);
         return errors.Count == 0 ? 0 : 1;
     }
 
@@ -92,10 +94,10 @@ public static class RuleOperations
         return errors;
     }
 
-    private static void ShowErrors(List<string> errors)
+    private static void ShowErrors(List<string> errors, Window? owner)
     {
         if (errors.Count == 0) return;
-        MessageBox.Show("Some rules could not be changed:\n\n" + string.Join("\n", errors.Take(15)),
-            AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+        Dialog.Show(owner, "Some rules could not be changed:\n\n" + string.Join("\n", errors.Take(15)),
+            MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 }

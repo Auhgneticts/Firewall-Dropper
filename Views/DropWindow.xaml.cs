@@ -29,17 +29,19 @@ public partial class DropWindow : Window
 
         ReloadSettings();
         Loaded += OnLoaded;
+        Activated += OnActivated;
     }
 
     /// <summary>
     /// Entry point for dropped files. Shows the confirmation list, or when the user turned confirmation off,
     /// goes straight to adding the rules (elevating if needed) and shows only the results.
     /// Returns false when no window was opened in this process (the work moved to an elevated copy).
+    /// <paramref name="forceConfirm"/> always shows the list first, whatever the setting says.
     /// </summary>
-    public static bool HandleDrop(IReadOnlyList<string> sources, Window? owner)
+    public static bool HandleDrop(IReadOnlyList<string> sources, Window? owner, bool forceConfirm = false)
     {
         var settings = SettingsStore.Load();
-        bool skipConfirm = !settings.ConfirmBeforeAdding && settings.IsValid
+        bool skipConfirm = !forceConfirm && !settings.ConfirmBeforeAdding && settings.IsValid
                            && ProgramResolver.ResolveAll(sources).Any(p => p.IsValid);
 
         DropWindow window;
@@ -51,7 +53,7 @@ public partial class DropWindow : Window
         {
             window = new DropWindow(sources, applyImmediately: true);
         }
-        else if (Elevation.RelaunchElevated([App.ApplyFlag, .. sources]) is not null)
+        else if (Elevation.RelaunchElevated([App.ApplyFlag, .. sources], owner) is not null)
         {
             return false;
         }
@@ -62,8 +64,9 @@ public partial class DropWindow : Window
             window.ShowMessage(MessageKind.Warning, "Administrator permission was declined, so no changes were made. Click OK to try again.");
         }
 
-        if (owner is { IsVisible: true }) window.Owner = owner;
+        WindowPlacement.Place(window, owner);
         window.Show();
+        App.BringToFront(window); // may have been requested by another launch, so make sure it's on top
         return true;
     }
 
@@ -82,6 +85,7 @@ public partial class DropWindow : Window
 
     private void ReloadSettings()
     {
+        _settingsStamp = File.Exists(SettingsStore.FilePath) ? File.GetLastWriteTimeUtc(SettingsStore.FilePath) : DateTime.MinValue;
         _settings = SettingsStore.Load();
 
         ChipPanel.Children.Clear();
@@ -161,7 +165,7 @@ public partial class DropWindow : Window
 
         // Hand the work to an elevated copy of the app, which shows its own results window.
         var sources = ValidItems.Select(i => i.Program.Source).ToList();
-        if (Elevation.RelaunchElevated([App.ApplyFlag, .. sources]) is null)
+        if (Elevation.RelaunchElevated([App.ApplyFlag, .. sources], this) is null)
         {
             ShowMessage(MessageKind.Warning, "Administrator permission was declined, so no changes were made. Click OK to try again.");
             return;
@@ -215,6 +219,10 @@ public partial class DropWindow : Window
         if (bad > 0) parts.Add($"{bad} not added");
         SubtitleText.Text = string.Join(" · ", parts);
 
+        // Past tense now that the work is done. If anything was skipped or failed, not every rule was created.
+        ChipCaption.Text = bad == 0 && warn == 0 ? "Rules that were created" : "Rules that were requested";
+        ChangeSettingsLink.Visibility = Visibility.Collapsed;
+
         OkButton.Content = "Close";
         OkButton.IsEnabled = true;
         CancelButton.Visibility = Visibility.Collapsed;
@@ -234,6 +242,7 @@ public partial class DropWindow : Window
             var saved = SettingsStore.Load();
             saved.ConfirmBeforeAdding = askFirst;
             SettingsStore.Save(saved);
+            _settingsStamp = File.GetLastWriteTimeUtc(SettingsStore.FilePath); // our own change; no reload needed
         }
         catch (Exception ex)
         {
@@ -243,9 +252,18 @@ public partial class DropWindow : Window
 
     private void ChangeSettings_Click(object sender, RoutedEventArgs e)
     {
-        var settings = new MainWindow { Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        settings.Closed += (_, _) => ReloadSettings();
-        settings.Show();
+        // One settings window for the whole app; this dialog picks up changes when it's activated again.
+        App.ShowMainWindow(this);
+    }
+
+    private DateTime _settingsStamp;
+
+    private void OnActivated(object? sender, EventArgs e)
+    {
+        if (_finished) return;
+        var stamp = File.Exists(SettingsStore.FilePath) ? File.GetLastWriteTimeUtc(SettingsStore.FilePath) : DateTime.MinValue;
+        if (stamp != _settingsStamp)
+            ReloadSettings();
     }
 
     private void ViewRules_Click(object sender, RoutedEventArgs e) => RulesWindow.ShowSingle(this);

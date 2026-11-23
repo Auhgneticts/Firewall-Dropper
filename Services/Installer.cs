@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows;
+using FirewallDropper.Views;
 using Microsoft.Win32;
 
 namespace FirewallDropper.Services;
@@ -95,9 +96,9 @@ public static class Installer
     }
 
     /// <summary>Interactive uninstall (FirewallDropper.exe --uninstall, or the App menu).</summary>
-    public static void RunUninstall()
+    public static void RunUninstall(Window? owner)
     {
-        if (MessageBox.Show($"Remove {AppInfo.Name} from this PC?", AppInfo.Name,
+        if (Dialog.Show(owner, $"Remove {AppInfo.Name} from this PC?",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
@@ -106,16 +107,16 @@ public static class Installer
 
         if (ruleCount > 0)
         {
-            var answer = MessageBox.Show(
+            var answer = Dialog.Show(owner,
                 $"{AppInfo.Name} created {ruleCount} firewall rule(s).\n\n" +
                 "Yes: remove those rules too.\n" +
                 "No: keep them in Windows Firewall (you can still delete them in Windows Defender Firewall, group \"Firewall Dropper\").",
-                AppInfo.Name, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
             if (answer == MessageBoxResult.Cancel)
                 return;
-            if (answer == MessageBoxResult.Yes && RuleOperations.Run(RuleOperations.RemoveAll, []) is null)
-                MessageBox.Show("Administrator permission was declined, so the firewall rules were kept.",
-                    AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Information);
+            if (answer == MessageBoxResult.Yes && RuleOperations.Run(RuleOperations.RemoveAll, [], owner) is null)
+                Dialog.Show(owner, "Administrator permission was declined, so the firewall rules were kept.",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         foreach (var lnk in new[] { DesktopShortcut, StartMenuShortcut, SendToShortcut })
@@ -135,7 +136,7 @@ public static class Installer
             });
         }
 
-        MessageBox.Show($"{AppInfo.Name} was removed.", AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Information);
+        Dialog.Show(owner, $"{AppInfo.Name} was removed.", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private static void TryDelete(string path)

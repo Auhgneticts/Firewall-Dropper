@@ -9,14 +9,17 @@ public static class Elevation
 {
     private const int ErrorCancelled = 1223;
 
-    /// <summary>Returns the started process, or null if the user declined the UAC prompt.</summary>
-    public static Process? RelaunchElevated(IEnumerable<string> args)
+    /// <summary>
+    /// Returns the started process, or null if the user declined the UAC prompt.
+    /// <paramref name="from"/> is the window the request came from; the elevated copy centers its windows on it.
+    /// </summary>
+    public static Process? RelaunchElevated(IEnumerable<string> args, System.Windows.Window? from)
     {
         var psi = new ProcessStartInfo(AppInfo.ExePath)
         {
             UseShellExecute = true,
             Verb = "runas",
-            Arguments = JoinArguments(args),
+            Arguments = JoinArguments([.. WindowPlacement.ArgsFor(from), .. args]),
         };
 
         try

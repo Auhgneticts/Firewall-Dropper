@@ -125,14 +125,14 @@ public partial class MainWindow : Window
 
     private void Install_Click(object sender, RoutedEventArgs e)
     {
-        var answer = MessageBox.Show(this,
+        var answer = Dialog.Show(this,
             $"Install {AppInfo.Name} for your user account?\n\n" +
             $"• Copies the app to {Installer.InstallDir}\n" +
             "• Adds Start menu and desktop shortcuts\n" +
             "• Adds it to the right-click “Send to” menu\n" +
             "• Lists it in Settings › Apps so it can be uninstalled\n\n" +
             "No administrator permission is needed.",
-            AppInfo.Name, MessageBoxButton.OKCancel, MessageBoxImage.Question);
+            MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (answer != MessageBoxResult.OK) return;
 
         try
@@ -141,14 +141,16 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Install failed: " + ex.Message, AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialog.Show(this, "Install failed: " + ex.Message, MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
         RefreshShortcutTip();
-        if (MessageBox.Show(this, "Installed. Open the installed copy now?", AppInfo.Name,
+        if (Dialog.Show(this, "Installed. Open the installed copy now?",
                 MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
         {
+            // Step aside first, or the new copy would just hand its launch back to this closing one.
+            SingleInstance.Release();
             Process.Start(new ProcessStartInfo(Installer.InstalledExe) { UseShellExecute = true });
             Application.Current.Shutdown();
         }
@@ -156,7 +158,7 @@ public partial class MainWindow : Window
 
     private void Uninstall_Click(object sender, RoutedEventArgs e)
     {
-        Installer.RunUninstall();
+        Installer.RunUninstall(this);
         if (!Installer.IsInstalled && Installer.IsRunningInstalledCopy)
             Application.Current.Shutdown();
         RefreshShortcutTip();
@@ -174,7 +176,7 @@ public partial class MainWindow : Window
     private void ToggleShortcut(Action action)
     {
         try { action(); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { Dialog.Show(this, ex.Message, MessageBoxButton.OK, MessageBoxImage.Error); }
         RefreshShortcutTip();
     }
 
@@ -186,7 +188,12 @@ public partial class MainWindow : Window
 
     private void OpenWindowsFirewall_Click(object sender, RoutedEventArgs e) => OpenWindowsFirewall(this);
 
-    private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow();
+        WindowPlacement.Place(about, this);
+        about.ShowDialog();
+    }
 
     public static void OpenWindowsFirewall(Window owner)
     {
@@ -198,7 +205,7 @@ public partial class MainWindow : Window
         {
             // Declining the UAC prompt for the console lands here; nothing to report in that case.
             if (ex is not System.ComponentModel.Win32Exception { NativeErrorCode: 1223 })
-                MessageBox.Show(owner, ex.Message, AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Error);
+                Dialog.Show(owner, ex.Message, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }
