@@ -59,25 +59,20 @@ public static class Installer
     /// <summary>Copies the app into the install folder and registers it. Throws on failure.</summary>
     public static void Install()
     {
-        Directory.CreateDirectory(InstallDir);
-
-        // A published build is one self-contained exe; a development build is a folder of files. Copy whatever is there.
-        var sourceDir = AppContext.BaseDirectory;
-        long totalBytes = 0;
-        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        // Start from an empty folder so files from an older version (or a failed install) don't pile up.
+        try
         {
-            var dest = Path.Combine(InstallDir, Path.GetRelativePath(sourceDir, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            try
-            {
-                File.Copy(file, dest, overwrite: true);
-            }
-            catch (IOException)
-            {
-                throw new IOException($"Couldn't replace {Path.GetFileName(dest)}. If Firewall Dropper is already installed and open, close it and try again.");
-            }
-            totalBytes += new FileInfo(file).Length;
+            if (Directory.Exists(InstallDir))
+                Directory.Delete(InstallDir, recursive: true);
         }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException("Couldn't replace the installed copy. If it's open, close it and try again.");
+        }
+
+        long totalBytes = CopyAppFiles(InstallDir);
+        if (!File.Exists(InstalledExe))
+            throw new IOException($"The app couldn't be copied to {InstallDir}.");
 
         ShellLink.Create(StartMenuShortcut, InstalledExe, ShortcutDescription);
         ShellLink.Create(DesktopShortcut, InstalledExe, ShortcutDescription);
@@ -93,6 +88,36 @@ public static class Installer
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         key.SetValue("EstimatedSize", (int)Math.Max(1, totalBytes / 1024), RegistryValueKind.DWord);
+    }
+
+    /// <summary>
+    /// Copies the running app into <paramref name="targetDir"/> and returns the bytes copied.
+    /// A published build is one self-contained exe; it unpacks itself to a temporary cache folder when it runs,
+    /// so <see cref="AppContext.BaseDirectory"/> is that cache, not where the exe lives, and only the exe is copied.
+    /// A development build is a folder of files next to the exe, and the whole folder is copied.
+    /// </summary>
+    internal static long CopyAppFiles(string targetDir)
+    {
+        string exe = AppInfo.ExePath;
+        string exeDir = Path.GetDirectoryName(exe)!;
+        bool isBundle = !FirewallService.SamePath(exeDir.TrimEnd('\\'), AppContext.BaseDirectory.TrimEnd('\\'));
+
+        Directory.CreateDirectory(targetDir);
+        if (isBundle)
+        {
+            File.Copy(exe, Path.Combine(targetDir, ExeName), overwrite: true);
+            return new FileInfo(exe).Length;
+        }
+
+        long total = 0;
+        foreach (var file in Directory.EnumerateFiles(exeDir, "*", SearchOption.AllDirectories))
+        {
+            var dest = Path.Combine(targetDir, Path.GetRelativePath(exeDir, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            File.Copy(file, dest, overwrite: true);
+            total += new FileInfo(file).Length;
+        }
+        return total;
     }
 
     /// <summary>Interactive uninstall (FirewallDropper.exe --uninstall, or the App menu).</summary>

@@ -149,6 +149,11 @@ public partial class MainWindow : Window
         if (Dialog.Show(this, "Installed. Open the installed copy now?",
                 MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
         {
+            if (!File.Exists(Installer.InstalledExe))
+            {
+                Dialog.Show(this, $"The installed copy wasn't found at {Installer.InstalledExe}.", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             // Step aside first, or the new copy would just hand its launch back to this closing one.
             SingleInstance.Release();
             Process.Start(new ProcessStartInfo(Installer.InstalledExe) { UseShellExecute = true });
